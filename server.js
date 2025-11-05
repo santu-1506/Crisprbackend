@@ -54,11 +54,28 @@ app.set('trust proxy', 1);
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || 'http://localhost:3000',
-    'http://localhost:3000',
-    'http://127.0.0.1:3000'
-  ],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, postman)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      process.env.FRONTEND_URL,
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+      'https://crispr-frontend-ergxuvfsk-atlurivenkat1-gmailcoms-projects.vercel.app'
+    ];
+    
+    // Allow any Vercel deployment URL for this project
+    if (origin.includes('vercel.app') && origin.includes('crispr-frontend')) {
+      return callback(null, true);
+    }
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],

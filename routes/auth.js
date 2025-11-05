@@ -11,11 +11,23 @@ const TOTPService = require('../utils/totpService');
 
 const router = express.Router();
 
-// Initialize Twilio client
-const twilioClient = twilio(
-  process.env.TWILIO_ACCOUNT_SID,
-  process.env.TWILIO_AUTH_TOKEN
-);
+// Initialize Twilio client (only if credentials are provided)
+let twilioClient = null;
+try {
+  if (process.env.TWILIO_ACCOUNT_SID && 
+      process.env.TWILIO_AUTH_TOKEN && 
+      !process.env.TWILIO_ACCOUNT_SID.includes('xxxxx')) {
+    twilioClient = twilio(
+      process.env.TWILIO_ACCOUNT_SID,
+      process.env.TWILIO_AUTH_TOKEN
+    );
+    console.log('✅ Twilio client initialized');
+  } else {
+    console.log('⚠️ Twilio not configured - SMS features will be disabled');
+  }
+} catch (error) {
+  console.error('❌ Twilio initialization error:', error.message);
+}
 
 // Initialize Firebase Admin (if not already initialized)  
 if (!admin.apps.length) {

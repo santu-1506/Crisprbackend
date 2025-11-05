@@ -337,7 +337,7 @@ def compute_metrics(y_true, y_pred_probs, y_pred_classes):
     return metrics
 
 
-def train_crispr_bert(datasets=['datasets/sam.txt'],
+def train_crispr_bert(datasets=['final1/datasets/sam.txt'],
                       epochs=30,
                       batch_size=256,
                       learning_rate=1e-4,
@@ -482,7 +482,7 @@ def train_crispr_bert(datasets=['datasets/sam.txt'],
 if __name__ == "__main__":
     # Train the model with updated hyperparameters
     model, history, metrics = train_crispr_bert(
-        datasets=['datasets/sam.txt'],
+        datasets=['final1/datasets/sam.txt'],
         epochs=30,
         batch_size=256,
         learning_rate=1e-4,

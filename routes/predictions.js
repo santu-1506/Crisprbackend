@@ -92,7 +92,7 @@ function getCategoryExplanation(category) {
 // Helper function to call Python model API
 async function callPythonModel(sgRNA, DNA) {
   try {
-    const response = await axios.post('http://localhost:5001/predict', {
+    const response = await axios.post('https://santu0032-crispr.hf.space/predict', {
       sgRNA: sgRNA,
       DNA: DNA
     }, {

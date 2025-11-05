@@ -19,17 +19,29 @@ const requiredEnvVars = [
   'MONGODB_URI',
   'JWT_SECRET',
   'JWT_REFRESH_SECRET',
+];
+
+// Optional environment variables (warn if missing but don't exit)
+const optionalEnvVars = [
   'TWILIO_ACCOUNT_SID',
   'TWILIO_AUTH_TOKEN',
   'TWILIO_VERIFY_SERVICE_SID',
+  'SUPABASE_URL',
+  'SUPABASE_KEY',
 ];
 
 const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+const missingOptionalVars = optionalEnvVars.filter(envVar => !process.env[envVar]);
 
 if (missingEnvVars.length > 0) {
   console.error(`❌ FATAL ERROR: Missing required environment variables: ${missingEnvVars.join(', ')}`);
   console.error('Please ensure all required variables are set in your .env file.');
   process.exit(1); // Exit with failure code
+}
+
+if (missingOptionalVars.length > 0) {
+  console.warn(`⚠️ WARNING: Missing optional environment variables: ${missingOptionalVars.join(', ')}`);
+  console.warn('Some features may be disabled. This is OK for development.');
 }
 
 

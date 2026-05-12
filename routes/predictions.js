@@ -99,7 +99,7 @@ async function callPythonModel(sgRNA, DNA) {
       sgRNA: sgRNA,
       DNA: DNA
     }, {
-      timeout: 30000 // 30 second timeout for cloud API
+      timeout: 60000 // 60 second timeout for cloud API
     });
     
     return response.data;
@@ -107,6 +107,29 @@ async function callPythonModel(sgRNA, DNA) {
     console.error('Error calling Python model:', error.message);
     throw new Error('Model prediction service unavailable');
   }
+}
+
+// Strict PAM check: DNA must end with NGG for Cas9 to cut
+function hasPAM(DNA) {
+  const pam = DNA.slice(-3);
+  return pam[1] === 'G' && pam[2] === 'G'; // NGG pattern
+}
+
+// Apply biological rules on top of model output
+function applyBiologicalOverrides(modelResult, sgRNA, DNA) {
+  const pamPresent = hasPAM(DNA);
+
+  if (!pamPresent) {
+    // No PAM = no cut, regardless of model confidence
+    return {
+      ...modelResult,
+      prediction: 0,
+      confidence: modelResult.prediction === 0 ? modelResult.confidence : 1 - modelResult.confidence,
+      override: 'PAM_MISMATCH',
+      override_reason: 'DNA sequence lacks NGG PAM — Cas9 cannot bind or cut without a valid PAM site'
+    };
+  }
+  return { ...modelResult, override: null };
 }
 
 // Text-based prediction endpoint
@@ -138,8 +161,14 @@ router.post('/text', authenticateToken, [
     const startTime = Date.now();
 
     // Call Python model for prediction
-    const modelResult = await callPythonModel(sgRNA, DNA);
+    const rawModelResult = await callPythonModel(sgRNA, DNA);
+    // Apply biological rules (PAM override etc.)
+    const modelResult = applyBiologicalOverrides(rawModelResult, sgRNA, DNA);
     const processingTime = Date.now() - startTime;
+
+    if (modelResult.override) {
+      console.log(`⚠️ Biological override applied: ${modelResult.override} — ${modelResult.override_reason}`);
+    }
 
     // Perform detailed scientific analysis
     const scientificAnalysis = analyzeSequencePair(
@@ -212,7 +241,9 @@ router.post('/text', authenticateToken, [
         // Model details
         model_info: {
           probabilities: modelResult.probabilities,
-          threshold_used: modelResult.threshold_used
+          threshold_used: modelResult.threshold_used,
+          override: modelResult.override || null,
+          override_reason: modelResult.override_reason || null
         },
         // Scientific analysis with research-based explanations
         scientific_analysis: {

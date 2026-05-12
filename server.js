@@ -4,14 +4,14 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+// Load .env file (optional - Render uses environment variables directly)
 const dotenvResult = require('dotenv').config();
-
-if (dotenvResult.error) {
+if (dotenvResult.error && dotenvResult.error.code !== 'ENOENT') {
   console.error('❌ Error loading .env file:', dotenvResult.error);
-} else {
+} else if (!dotenvResult.error) {
   console.log('✅ .env file loaded successfully.');
-  // Optional: Uncomment the line below to debug the loaded variables
-  // console.log(dotenvResult.parsed);
+} else {
+  console.log('ℹ️ No .env file found - using environment variables from hosting platform');
 }
 
 // Graceful shutdown and environment variable checks
@@ -41,18 +41,38 @@ app.set('trust proxy', 1);
 
 // Security middleware
 app.use(helmet());
+
+// CORS configuration - allow frontend origins
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'https://crisprai.vercel.app',
+  'https://crispr-frontend.vercel.app',
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
 app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || 'http://localhost:3000',
-    'http://localhost:3000',
-    'http://127.0.0.1:3000'
-  ],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Check if origin is in allowed list or is a Vercel preview URL
+    if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
+    
+    console.log('CORS blocked origin:', origin);
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   exposedHeaders: ['Content-Length', 'X-JSON'],
-  maxAge: 86400 // 24 hours
+  maxAge: 86400
 }));
+
+// Handle preflight requests
+app.options('*', cors());
 
 // Rate limiting
 const limiter = rateLimit({

@@ -566,14 +566,34 @@ router.post('/google', async (req, res) => {
       });
     }
 
+    // Check if Google Client ID is configured
+    if (!process.env.GOOGLE_CLIENT_ID) {
+      console.error('❌ GOOGLE_CLIENT_ID environment variable is not set');
+      return res.status(500).json({
+        success: false,
+        message: 'Google authentication is not configured on the server',
+        code: 'GOOGLE_NOT_CONFIGURED'
+      });
+    }
+
     // Verify and decode the Google JWT token
     const { OAuth2Client } = require('google-auth-library');
     const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
     
-    const ticket = await client.verifyIdToken({
-      idToken: credential,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
+    let ticket;
+    try {
+      ticket = await client.verifyIdToken({
+        idToken: credential,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+    } catch (verifyError) {
+      console.error('Google token verification failed:', verifyError.message);
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid Google token. Please try again.',
+        code: 'INVALID_GOOGLE_TOKEN'
+      });
+    }
     
     const payload = ticket.getPayload();
     const { sub: googleId, email, name, picture, email_verified } = payload;

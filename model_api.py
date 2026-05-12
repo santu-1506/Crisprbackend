@@ -60,15 +60,17 @@ CORS(app)
 
 # Global model and configuration
 model = None
-# Define paths for the weights file. We ONLY use the .h5 file now.
-MODEL_PATH_H5 = "final1/weight/final_model_compatible.h5"
-MODEL_PATH = MODEL_PATH_H5 # Set the primary path to the .h5 file
+# Prefer the portable .weights.h5 file (Python-version-independent).
+# Fall back to .keras only if the new file isn't present.
+MODEL_PATH_WEIGHTS = "final1/weight/final_model.weights.h5"
+MODEL_PATH_KERAS   = "final1/weight/final_model.keras"
+MODEL_PATH = MODEL_PATH_WEIGHTS if os.path.exists(MODEL_PATH_WEIGHTS) else MODEL_PATH_KERAS
 
 threshold = 0.5
 model_loaded = False
 
 # Configuration
-THRESHOLD_PATH = 'final1/weight/threshold.npy'
+THRESHOLD_PATH = 'final1/weight/threshold.json'
 
 
 def load_trained_model():
@@ -416,11 +418,12 @@ def model_info():
             'model_path': MODEL_PATH,
             'threshold': float(threshold),
             'architecture': {
-                'cnn_branch': 'Inception CNN (multi-scale convolutions)',
-                'bert_branch': 'Transformer with multi-head attention',
-                'bigru_layers': 'Bidirectional GRU (20+20 units)',
-                'weights': 'CNN: 20%, BERT: 80%',
-                'output': 'Binary classification (on-target vs off-target)'
+                'cnn_branch': 'Inception CNN — native Conv2D (5/15/25/35 filters, 1×1 to 5×5 kernels)',
+                'bert_branch': 'BERT-style transformer — 4 blocks, 256-dim, 4-head attention',
+                'bigru_layers': 'Bidirectional GRU (40 units each direction)',
+                'fusion': 'Flatten ALL 26 timesteps → Dense(128) → Dense(64)',
+                'weights': 'CNN: 20%, BERT: 80% (per paper §2.4)',
+                'output': 'Binary classification — 2-class softmax'
             },
             'input_format': {
                 'sgRNA_length': 23,

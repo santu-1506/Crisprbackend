@@ -89,14 +89,17 @@ function getCategoryExplanation(category) {
   return explanations[category] || 'Unknown category';
 }
 
+// Model API URL - uses Hugging Face Space or local
+const MODEL_API_URL = process.env.MODEL_API_URL || 'http://localhost:5001';
+
 // Helper function to call Python model API
 async function callPythonModel(sgRNA, DNA) {
   try {
-    const response = await axios.post('http://localhost:5001/predict', {
+    const response = await axios.post(`${MODEL_API_URL}/predict`, {
       sgRNA: sgRNA,
       DNA: DNA
     }, {
-      timeout: 10000 // 10 second timeout
+      timeout: 30000 // 30 second timeout for cloud API
     });
     
     return response.data;

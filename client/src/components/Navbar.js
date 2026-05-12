@@ -1,264 +1,198 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  Bars3Icon, 
-  XMarkIcon,
-  BeakerIcon,
-  DocumentTextIcon,
-  HomeIcon,
-  UserIcon,
-  ArrowRightOnRectangleIcon,
-  CogIcon
-} from '@heroicons/react/24/outline';
+import { Menu, X, Home, FlaskConical, FileBarChart, Settings as SettingsIcon, User, LogOut, Dna } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { jwtDecode } from 'jwt-decode';
 
 const Navbar = () => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen]                   = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userEmail, setUserEmail] = useState('');
-  const [userFullName, setUserFullName] = useState('');
+  const [userEmail, setUserEmail]             = useState('');
+  const [userFullName, setUserFullName]       = useState('');
+  const [scrolled, setScrolled]               = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
   const navigation = [
-    { name: 'Home', href: '/', icon: HomeIcon },
-    { name: 'Predict', href: '/predict', icon: BeakerIcon },
-    { name: 'Results', href: '/results', icon: DocumentTextIcon },
-    { name: 'Settings', href: '/settings', icon: CogIcon },
+    { name: 'Home',     href: '/',         icon: Home },
+    { name: 'Predict',  href: '/predict',  icon: FlaskConical },
+    { name: 'Results',  href: '/results',  icon: FileBarChart },
+    { name: 'Settings', href: '/settings', icon: SettingsIcon },
   ];
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (p) => location.pathname === p;
 
-  // Check authentication status using JWT token validation
   useEffect(() => {
-    const checkAuth = () => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    const check = () => {
       try {
-        const token = localStorage.getItem('authToken');
+        const token    = localStorage.getItem('authToken');
         const userData = localStorage.getItem('userData');
-        
         if (!token || !userData) {
-          setIsAuthenticated(false);
-          setUserEmail('');
-          setUserFullName('');
-          return;
+          setIsAuthenticated(false); setUserEmail(''); setUserFullName(''); return;
         }
-
-        // Verify token is still valid
-        const decodedToken = jwtDecode(token);
-        const currentTime = Date.now() / 1000;
-        
-        if (decodedToken.exp < currentTime) {
-          // Token expired, clean up
-          localStorage.removeItem('authToken');
-          localStorage.removeItem('userData');
-          localStorage.removeItem('isAuthenticated');
-          localStorage.removeItem('refreshToken');
-          setIsAuthenticated(false);
-          setUserEmail('');
-          setUserFullName('');
-          return;
+        const decoded = jwtDecode(token);
+        if (decoded.exp < Date.now() / 1000) {
+          ['authToken', 'userData', 'isAuthenticated', 'refreshToken'].forEach((k) => localStorage.removeItem(k));
+          setIsAuthenticated(false); setUserEmail(''); setUserFullName(''); return;
         }
-
-        // Token is valid, get user data
-        const user = JSON.parse(userData);
-        setIsAuthenticated(true);
-        setUserEmail(user.email);
-        setUserFullName(user.fullName);
-      } catch (error) {
-        // Invalid token or parsing error, clean up
-        console.error('Token validation error:', error);
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('userData');
-        localStorage.removeItem('isAuthenticated');
-        localStorage.removeItem('refreshToken');
+        const u = JSON.parse(userData);
+        setIsAuthenticated(true); setUserEmail(u.email); setUserFullName(u.fullName);
+      } catch {
+        ['authToken', 'userData', 'isAuthenticated', 'refreshToken'].forEach((k) => localStorage.removeItem(k));
         setIsAuthenticated(false);
-        setUserEmail('');
-        setUserFullName('');
       }
     };
-
-    checkAuth();
+    check();
   }, [location]);
 
-  const handleLogout = async () => {
-    try {
-      // Clear all authentication data
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('userData');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('isAuthenticated');
-      
-      // Clear old authentication data (for backward compatibility)
-      localStorage.removeItem('userEmail');
-      localStorage.removeItem('userName');
-      localStorage.removeItem('savedEmail');
-      localStorage.removeItem('savedPassword');
-      localStorage.removeItem('rememberMe');
-      localStorage.removeItem('googleAuth');
-      
-      // Update state
-      setIsAuthenticated(false);
-      setUserEmail('');
-      setUserFullName('');
-      
-      toast.success('Logged out successfully');
-      navigate('/auth');
-    } catch (error) {
-      console.error('Logout error:', error);
-      toast.error('Logout failed');
-    }
+  const handleLogout = () => {
+    ['authToken', 'userData', 'refreshToken', 'isAuthenticated',
+     'userEmail', 'userName', 'savedEmail', 'savedPassword',
+     'rememberMe', 'googleAuth'].forEach((k) => localStorage.removeItem(k));
+    setIsAuthenticated(false); setUserEmail(''); setUserFullName('');
+    toast.success('Logged out');
+    navigate('/auth');
   };
 
   return (
-    <nav className="bg-[#1f2937] border-b border-gray-700 sticky top-0 z-50">
+    <nav className={`sticky top-0 z-50 transition-all duration-300 ${
+      scrolled ? 'glass-strong shadow-lg shadow-black/40' : 'bg-transparent'
+    }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          {/* Logo */}
-          <div className="flex items-center">
-            <Link to="/" className="flex items-center space-x-2">
-              <motion.div
-                whileHover={{ rotate: 360 }}
-                transition={{ duration: 0.5 }}
-                className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center"
-              >
-                <BeakerIcon className="w-5 h-5 text-white" />
-              </motion.div>
-              <span className="text-xl font-bold text-white">
-                CRISPR Predict
+        <div className="flex justify-between h-16 items-center">
+          {/* LOGO */}
+          <Link to="/" className="flex items-center gap-2.5 group">
+            <motion.div
+              whileHover={{ rotate: 360 }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+              className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30"
+            >
+              <Dna className="w-5 h-5 text-white" />
+            </motion.div>
+            <div className="flex flex-col">
+              <span className="font-display font-bold text-base leading-none">
+                CRISPR <span className="text-gradient">BERT</span>
               </span>
-            </Link>
-          </div>
+              <span className="text-[10px] uppercase tracking-widest text-zinc-500 leading-none mt-1">
+                v2 · F1=0.924
+              </span>
+            </div>
+          </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          {/* DESKTOP NAV */}
+          <div className="hidden md:flex items-center gap-1">
             {isAuthenticated && navigation.map((item) => {
               const Icon = item.icon;
+              const active = isActive(item.href);
               return (
                 <Link
                   key={item.name}
                   to={item.href}
-                  className={`relative px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center space-x-1 ${
-                    isActive(item.href)
-                      ? 'text-blue-400 bg-blue-900/20'
-                      : 'text-gray-300 hover:text-blue-400 hover:bg-gray-700/50'
+                  className={`relative px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+                    active ? 'text-white' : 'text-zinc-400 hover:text-white'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
                   <span>{item.name}</span>
-                  {isActive(item.href) && (
+                  {active && (
                     <motion.div
-                      layoutId="navbar-indicator"
-                      className="absolute inset-0 bg-blue-900/30 rounded-md -z-10"
-                      initial={false}
-                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                      layoutId="nav-active"
+                      className="absolute inset-0 rounded-lg bg-gradient-to-r from-cyan-500/15 to-purple-500/15 border border-cyan-500/20 -z-10"
+                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                     />
                   )}
                 </Link>
               );
             })}
-            
-            {/* Auth Section */}
-            <div className={`flex items-center space-x-4 ${isAuthenticated ? 'ml-6 pl-6 border-l border-gray-600' : ''}`}>
+
+            <div className={`flex items-center gap-3 ${isAuthenticated ? 'ml-4 pl-4 border-l border-white/10' : ''}`}>
               {isAuthenticated ? (
-                <div className="flex items-center space-x-3">
-                  <div className="flex items-center space-x-2 text-sm text-gray-300">
-                    <UserIcon className="w-4 h-4" />
-                    <span className="hidden lg:inline">{userFullName || userEmail}</span>
+                <>
+                  <div className="flex items-center gap-2 text-xs text-zinc-400">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center text-[10px] font-bold">
+                      {(userFullName || userEmail).charAt(0).toUpperCase()}
+                    </div>
+                    <span className="hidden lg:inline">{userFullName || userEmail.split('@')[0]}</span>
                   </div>
                   <button
                     onClick={handleLogout}
-                    className="flex items-center space-x-1 px-3 py-2 text-sm font-medium text-gray-300 hover:text-red-400 hover:bg-red-900/20 rounded-md transition-all duration-200"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition"
                   >
-                    <ArrowRightOnRectangleIcon className="w-4 h-4" />
-                    <span>Logout</span>
+                    <LogOut className="w-3.5 h-3.5" />
+                    Logout
                   </button>
-                </div>
+                </>
               ) : (
                 <Link
                   to="/auth"
-                  className="flex items-center space-x-2 px-4 py-2 text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:shadow-lg transition-all duration-300"
+                  className="btn-primary inline-flex items-center gap-2 text-sm px-5 py-2"
                 >
-                  <UserIcon className="w-4 h-4" />
-                  <span>Login</span>
+                  <User className="w-4 h-4" />
+                  Login
                 </Link>
               )}
             </div>
           </div>
 
-          {/* Mobile menu button */}
-          <div className="md:hidden flex items-center">
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-300 hover:bg-gray-700/50 transition-colors duration-200"
-            >
-              {isOpen ? (
-                <XMarkIcon className="w-6 h-6" />
-              ) : (
-                <Bars3Icon className="w-6 h-6" />
-              )}
-            </button>
-          </div>
+          {/* MOBILE BUTTON */}
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="md:hidden p-2 text-zinc-400 hover:text-white"
+          >
+            {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
         </div>
       </div>
 
-      {/* Mobile Navigation */}
+      {/* MOBILE NAV */}
       <motion.div
         initial={false}
-        animate={{ height: isOpen ? 'auto' : 0 }}
-        className="md:hidden overflow-hidden bg-[#1f2937] border-t border-gray-700"
+        animate={{ height: isOpen ? 'auto' : 0, opacity: isOpen ? 1 : 0 }}
+        transition={{ duration: 0.3 }}
+        className="md:hidden overflow-hidden glass border-t border-white/5"
       >
-        <div className="px-2 pt-2 pb-3 space-y-1">
+        <div className="px-3 py-3 space-y-1">
           {isAuthenticated && navigation.map((item) => {
             const Icon = item.icon;
+            const active = isActive(item.href);
             return (
               <Link
                 key={item.name}
                 to={item.href}
                 onClick={() => setIsOpen(false)}
-                className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 flex items-center space-x-2 ${
-                  isActive(item.href)
-                    ? 'text-blue-400 bg-blue-900/20'
-                    : 'text-gray-300 hover:text-blue-400 hover:bg-gray-700/50'
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition ${
+                  active ? 'bg-cyan-500/10 text-cyan-400' : 'text-zinc-400 hover:bg-white/5 hover:text-white'
                 }`}
               >
-                <Icon className="w-5 h-5" />
-                <span>{item.name}</span>
+                <Icon className="w-4 h-4" />
+                {item.name}
               </Link>
             );
           })}
-          
-          {/* Mobile Auth Section */}
-          <div className="pt-2 mt-2 border-t border-gray-600">
-            {isAuthenticated ? (
-              <div className="space-y-1">
-                <div className="px-3 py-2 text-sm text-gray-300 flex items-center space-x-2">
-                  <UserIcon className="w-4 h-4" />
-                  <span>{userFullName || userEmail}</span>
-                </div>
-                <button
-                  onClick={() => {
-                    handleLogout();
-                    setIsOpen(false);
-                  }}
-                  className="w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-red-400 hover:bg-red-900/20 transition-colors duration-200 flex items-center space-x-2"
-                >
-                  <ArrowRightOnRectangleIcon className="w-5 h-5" />
-                  <span>Logout</span>
-                </button>
-              </div>
-            ) : (
-              <Link
-                to="/auth"
-                onClick={() => setIsOpen(false)}
-                className="block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 flex items-center space-x-2 text-white bg-gradient-to-r from-blue-600 to-purple-600"
-              >
-                <UserIcon className="w-5 h-5" />
-                <span>Login</span>
-              </Link>
-            )}
-          </div>
+          {isAuthenticated ? (
+            <button
+              onClick={() => { handleLogout(); setIsOpen(false); }}
+              className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-red-400 hover:bg-red-500/10"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </button>
+          ) : (
+            <Link
+              to="/auth"
+              onClick={() => setIsOpen(false)}
+              className="block px-3 py-2.5 rounded-lg text-sm bg-gradient-to-r from-cyan-500 to-purple-500 text-white text-center font-medium"
+            >
+              Login
+            </Link>
+          )}
         </div>
       </motion.div>
     </nav>
